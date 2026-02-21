@@ -35,7 +35,26 @@ export const ShiftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isRamadanMode, setRamadanMode] = useState(false);
   const [isEmergencyMode, setEmergencyMode] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+  const [isDemoMode] = useState(() => localStorage.getItem('SALTSYNC_DEMO_MODE') === 'true');
+
   useEffect(() => {
+    if (isDemoMode) {
+      const demoEmployees: Employee[] = [
+        { id: '1', name: 'Demo John', role: 'TL', active: true, fridayOff: true, holidayOff: true, rotationPosition: 'Morning', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+        { id: '2', name: 'Demo Jane', role: 'Manager', active: true, fridayOff: true, holidayOff: true, rotationPosition: 'Morning', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+        { id: '3', name: 'Demo Alice', role: 'Senior', active: true, fridayOff: false, holidayOff: false, rotationPosition: 'Evening', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+        { id: '4', name: 'Demo Bob', role: 'Junior', active: true, fridayOff: false, holidayOff: false, rotationPosition: 'Night', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+      ];
+      setEmployees(demoEmployees);
+      setTemplates([
+        { id: 't1', name: 'Normal', morning: { startTime: '09:00', endTime: '18:00' }, evening: { startTime: '14:00', endTime: '22:00' }, night: { startTime: '22:00', endTime: '09:00' }, active: true }
+      ]);
+      setUser({ uid: 'demo-user', email: 'demo@saltsync.com', role: 'admin' });
+      setLoading(false);
+      return;
+    }
+
     if (!auth || !db) {
       setLoading(false);
       return;
@@ -47,32 +66,28 @@ export const ShiftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         setUser(null);
       }
-    });
+    }, (err) => setError(err.message));
 
     // Seed initial data if needed
     const seedData = async () => {
       if (!db) return;
-      const empSnap = await getDocs(collection(db, 'employees'));
-      if (empSnap.empty) {
-        const initialEmployees = [
-          { name: 'John Doe', role: 'TL', active: true, fridayOff: true, holidayOff: true, rotationPosition: 'Morning', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
-          { name: 'Jane Smith', role: 'Manager', active: true, fridayOff: true, holidayOff: true, rotationPosition: 'Morning', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
-          { name: 'Alice Johnson', role: 'Senior', active: true, fridayOff: false, holidayOff: false, rotationPosition: 'Evening', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
-          { name: 'Bob Wilson', role: 'Junior', active: true, fridayOff: false, holidayOff: false, rotationPosition: 'Night', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
-        ];
-        for (const emp of initialEmployees) {
-          await addDoc(collection(db, 'employees'), emp);
+      try {
+        const empSnap = await getDocs(collection(db, 'employees'));
+        if (empSnap.empty) {
+          const initialEmployees = [
+            { name: 'John Doe', role: 'TL', active: true, fridayOff: true, holidayOff: true, rotationPosition: 'Morning', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+            { name: 'Jane Smith', role: 'Manager', active: true, fridayOff: true, holidayOff: true, rotationPosition: 'Morning', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+            { name: 'Alice Johnson', role: 'Senior', active: true, fridayOff: false, holidayOff: false, rotationPosition: 'Evening', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+            { name: 'Bob Wilson', role: 'Junior', active: true, fridayOff: false, holidayOff: false, rotationPosition: 'Night', totalNightCount: 0, totalShiftCount: 0, createdAt: new Date().toISOString() },
+          ];
+          for (const emp of initialEmployees) {
+            await addDoc(collection(db, 'employees'), emp);
+          }
         }
-      }
-
-      const templateSnap = await getDocs(collection(db, 'shiftTemplates'));
-      if (templateSnap.empty) {
-        const initialTemplates = [
-          { name: 'Normal', morning: { startTime: '09:00', endTime: '18:00' }, evening: { startTime: '14:00', endTime: '22:00' }, night: { startTime: '22:00', endTime: '09:00' }, active: true },
-          { name: 'Ramadan', morning: { startTime: '08:00', endTime: '15:00' }, evening: { startTime: '15:00', endTime: '21:00' }, night: { startTime: '21:00', endTime: '08:00' }, active: false },
-        ];
-        for (const t of initialTemplates) {
-          await addDoc(collection(db, 'shiftTemplates'), t);
+      } catch (err: any) {
+        console.error("Seeding failed", err);
+        if (err.code === 'permission-denied') {
+          setError("Firebase Permission Denied. Please update your Firestore Rules to allow read/write.");
         }
       }
     };
@@ -81,32 +96,29 @@ export const ShiftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const unsubEmployees = onSnapshot(collection(db, 'employees'), (snap) => {
       setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-    });
+    }, (err) => setError(err.message));
 
     const unsubRosters = onSnapshot(query(collection(db, 'rosters'), orderBy('weekStartDate', 'desc'), limit(10)), (snap) => {
       setRosters(snap.docs.map(d => ({ id: d.id, ...d.data() } as Roster)));
+      setLoading(false);
+    }, (err) => {
+      setError(err.message);
       setLoading(false);
     });
 
     const unsubTemplates = onSnapshot(collection(db, 'shiftTemplates'), (snap) => {
       setTemplates(snap.docs.map(d => ({ id: d.id, ...d.data() } as ShiftTemplate)));
-    });
+    }, (err) => setError(err.message));
 
     const unsubLeaves = onSnapshot(collection(db, 'leaves'), (snap) => {
       setLeaves(snap.docs.map(d => ({ id: d.id, ...d.data() } as Leave)));
-    });
+    }, (err) => setError(err.message));
 
     const unsubNotices = onSnapshot(collection(db, 'notices'), (snap) => {
       setNotices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notice)));
-    });
-
-    // Fallback loading timeout
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
+    }, (err) => setError(err.message));
 
     return () => {
-      clearTimeout(timeout);
       unsubAuth();
       unsubEmployees();
       unsubRosters();
@@ -114,7 +126,7 @@ export const ShiftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       unsubLeaves();
       unsubNotices();
     };
-  }, []);
+  }, [isDemoMode]);
 
   return (
     <ShiftContext.Provider value={{

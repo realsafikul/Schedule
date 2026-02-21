@@ -53,15 +53,27 @@ export default function App() {
             Save & Initialize System
           </button>
 
-          <button 
-            className="btn btn-link btn-sm text-danger text-decoration-none mb-3"
-            onClick={() => {
-              localStorage.removeItem('SALTSYNC_FIREBASE_CONFIG');
-              window.location.reload();
-            }}
-          >
-            Clear saved config
-          </button>
+          <div className="d-flex gap-2 mb-3">
+            <button 
+              className="btn btn-outline-secondary w-100 py-2 small fw-bold rounded-3"
+              onClick={() => {
+                localStorage.setItem('SALTSYNC_DEMO_MODE', 'true');
+                window.location.reload();
+              }}
+            >
+              Try Demo Mode (No Setup)
+            </button>
+            <button 
+              className="btn btn-link btn-sm text-danger text-decoration-none"
+              onClick={() => {
+                localStorage.removeItem('SALTSYNC_FIREBASE_CONFIG');
+                localStorage.removeItem('SALTSYNC_DEMO_MODE');
+                window.location.reload();
+              }}
+            >
+              Clear
+            </button>
+          </div>
 
           <div className="bg-light p-3 rounded-3 text-start small">
             <p className="fw-bold mb-2 text-primary d-flex align-items-center gap-2">
