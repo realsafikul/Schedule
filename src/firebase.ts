@@ -3,7 +3,13 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getAuth, Auth } from "firebase/auth";
 
 const getFirebaseConfig = () => {
-  const configJson = import.meta.env.VITE_FIREBASE_CONFIG;
+  // 1. Try environment variable first
+  let configJson = import.meta.env.VITE_FIREBASE_CONFIG;
+  
+  // 2. Fallback to localStorage if environment variable is missing
+  if (!configJson || configJson === 'undefined') {
+    configJson = localStorage.getItem('SALTSYNC_FIREBASE_CONFIG');
+  }
   
   if (configJson && configJson !== 'undefined') {
     try {

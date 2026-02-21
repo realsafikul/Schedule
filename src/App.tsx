@@ -30,6 +30,8 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [permissionError, setPermissionError] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [manualConfig, setManualConfig] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{ date: string; shift: string; employeeName: string } | null>(null);
   const [selectedWeek, setSelectedWeek] = useState(format(startOfWeek(new Date(), { weekStartsOn: 6 }), 'yyyy-MM-dd'));
@@ -148,6 +150,12 @@ export default function App() {
 
   const currentRoster = rosters.find(r => r.weekStartDate === selectedWeek) || rosters[0];
 
+  const handleSaveManualConfig = () => {
+    if (!manualConfig.trim()) return;
+    localStorage.setItem('SALTSYNC_FIREBASE_CONFIG', manualConfig);
+    window.location.reload();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -203,14 +211,46 @@ export default function App() {
           </div>
           <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl space-y-3">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">How to fix:</p>
-            <ol className="text-sm space-y-2 text-slate-600 dark:text-slate-400 list-decimal pl-4">
-              <li>Go to Firebase Console &gt; Project Settings</li>
-              <li>Copy the <b>firebaseConfig</b> object</li>
-              <li>Add a Secret named: <code className="bg-slate-200 dark:bg-slate-800 px-1 rounded">VITE_FIREBASE_CONFIG</code></li>
-              <li>Paste the code you copied as the value</li>
-            </ol>
+            {showManualInput ? (
+              <div className="space-y-3">
+                <textarea 
+                  value={manualConfig}
+                  onChange={(e) => setManualConfig(e.target.value)}
+                  placeholder="Paste your firebaseConfig code here..."
+                  className="w-full h-32 p-3 text-xs font-mono bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleSaveManualConfig}
+                    className="flex-1 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-all"
+                  >
+                    Save & Start
+                  </button>
+                  <button 
+                    onClick={() => setShowManualInput(false)}
+                    className="px-4 py-2 text-sm font-bold text-slate-500"
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <ol className="text-sm space-y-2 text-slate-600 dark:text-slate-400 list-decimal pl-4">
+                  <li>Go to Firebase Console &gt; Project Settings</li>
+                  <li>Copy the <b>firebaseConfig</b> object</li>
+                  <li>Click the button below to paste it directly</li>
+                </ol>
+                <button 
+                  onClick={() => setShowManualInput(true)}
+                  className="w-full py-2.5 bg-indigo-600/10 text-indigo-600 text-sm font-bold rounded-lg hover:bg-indigo-600/20 transition-all"
+                >
+                  Paste Config Manually
+                </button>
+              </>
+            )}
           </div>
-          <p className="text-xs text-center text-slate-400">After adding secrets, the application will automatically refresh.</p>
+          <p className="text-xs text-center text-slate-400">This will save the configuration to your browser's local storage.</p>
         </div>
       </div>
     );
