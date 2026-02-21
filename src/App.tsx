@@ -10,34 +10,58 @@ import { signOut } from 'firebase/auth';
 export default function App() {
   const { user, loading, isEmergencyMode, setEmergencyMode } = useShift();
   const [currentView, setCurrentView] = useState<'public' | 'admin' | 'analytics'>('public');
+  const [configInput, setConfigInput] = useState('');
 
   const handleLogout = () => {
     if (auth) signOut(auth);
     setCurrentView('public');
   };
 
+  const saveConfig = () => {
+    if (!configInput.trim()) return;
+    localStorage.setItem('SALTSYNC_FIREBASE_CONFIG', configInput.trim());
+    window.location.reload();
+  };
+
   if (!isConfigured) {
     return (
       <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light p-4">
-        <div className="card border-0 shadow-lg rounded-4 p-5 text-center" style={{ maxWidth: '500px' }}>
-          <div className="bg-warning bg-opacity-10 text-warning p-4 rounded-circle d-inline-flex mb-4">
-            <AlertTriangle size={48} />
+        <div className="card border-0 shadow-lg rounded-4 p-5 text-center" style={{ maxWidth: '600px' }}>
+          <div className="bg-primary bg-opacity-10 text-primary p-4 rounded-circle d-inline-flex mb-4">
+            <Settings size={48} />
           </div>
-          <h2 className="fw-black mb-3">Configuration Required</h2>
+          <h2 className="fw-black mb-3">Welcome to SaltSync</h2>
           <p className="text-muted mb-4">
-            Please provide your <strong>VITE_FIREBASE_CONFIG</strong> in the environment variables to initialize the SaltSync Enterprise system.
+            To get started, please paste your Firebase Configuration below. This is a one-time setup.
           </p>
-          <div className="bg-light p-3 rounded-3 text-start small mb-4">
-            <p className="fw-bold mb-2">How to fix:</p>
-            <ol className="ps-3 mb-0">
-              <li>Go to Firebase Console &gt; Project Settings</li>
-              <li>Copy the <code>firebaseConfig</code> object</li>
-              <li>Add it as <code>VITE_FIREBASE_CONFIG</code> in your environment</li>
-            </ol>
+          
+          <div className="mb-4">
+            <textarea 
+              className="form-control font-monospace small rounded-3 bg-light border-0" 
+              rows={8}
+              placeholder={`Paste your config here, for example:\n\nconst firebaseConfig = {\n  apiKey: "...",\n  authDomain: "...",\n  ...\n};`}
+              value={configInput}
+              onChange={(e) => setConfigInput(e.target.value)}
+            />
           </div>
-          <button className="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" onClick={() => window.location.reload()}>
-            I've updated the config, Refresh
+
+          <button 
+            className="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm mb-3" 
+            onClick={saveConfig}
+            disabled={!configInput.trim()}
+          >
+            Save & Initialize System
           </button>
+
+          <div className="bg-light p-3 rounded-3 text-start small">
+            <p className="fw-bold mb-2 text-primary d-flex align-items-center gap-2">
+              <ShieldAlert size={16} /> Where to find this?
+            </p>
+            <p className="mb-0 text-muted">
+              Go to your <strong>Firebase Console</strong> &gt; <strong>Project Settings</strong>. 
+              Scroll down to "Your apps", select the Web icon (<code>&lt;/&gt;</code>), and copy the <code>firebaseConfig</code> object.
+            </p>
+          </div>
         </div>
       </div>
     );
