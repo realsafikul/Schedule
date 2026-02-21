@@ -15,10 +15,11 @@ import { db, auth, isConfigured } from './firebase';
 import { Employee, Holiday, Leave, Roster, INITIAL_EMPLOYEES, HOLIDAYS_2026 } from './types';
 import { RosterTable } from './components/RosterTable';
 import { LeaveModal } from './components/LeaveModal';
+import { ShiftActionModal } from './components/ShiftActionModal';
 import { generateWeeklyRoster, rotateShifts } from './utils/rosterEngine';
 import { exportToPDF, exportToExcel } from './utils/exportUtils';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
-import { Calendar, Download, Plus, Settings, BarChart3, Moon, Sun, LogIn } from 'lucide-react';
+import { Calendar, Download, Plus, Settings, BarChart3, Moon, Sun, LogIn, ShieldAlert } from 'lucide-react';
 
 export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -27,7 +28,10 @@ export default function App() {
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [permissionError, setPermissionError] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [selectedCell, setSelectedCell] = useState<{ date: string; shift: string; employeeName: string } | null>(null);
   const [selectedWeek, setSelectedWeek] = useState(format(startOfWeek(new Date(), { weekStartsOn: 6 }), 'yyyy-MM-dd'));
 
   useEffect(() => {
@@ -43,6 +47,9 @@ export default function App() {
       } else {
         setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
       }
+    }, (err) => {
+      console.error("Firestore Error:", err);
+      if (err.code === 'permission-denied') setPermissionError(true);
     });
 
     const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snap) => {
@@ -51,14 +58,21 @@ export default function App() {
       } else {
         setHolidays(snap.docs.map(d => ({ id: d.id, ...d.data() } as Holiday)));
       }
+    }, (err) => {
+      if (err.code === 'permission-denied') setPermissionError(true);
     });
 
     const unsubLeaves = onSnapshot(collection(db, 'leaves'), (snap) => {
       setLeaves(snap.docs.map(d => ({ id: d.id, ...d.data() } as Leave)));
+    }, (err) => {
+      if (err.code === 'permission-denied') setPermissionError(true);
     });
 
     const unsubRosters = onSnapshot(query(collection(db, 'rosters'), orderBy('weekStartDate', 'desc'), limit(5)), (snap) => {
       setRosters(snap.docs.map(d => ({ id: d.id, ...d.data() } as Roster)));
+      setLoading(false);
+    }, (err) => {
+      if (err.code === 'permission-denied') setPermissionError(true);
       setLoading(false);
     });
 
@@ -99,18 +113,37 @@ export default function App() {
 
   const handleAddLeave = async (data: any) => {
     if (!isConfigured || !db) return;
-    const employee = employees.find(e => e.id === data.employeeId);
+    const employee = employees.find(e => e.id === data.employeeId || e.name === data.employeeName);
     if (!employee) return;
 
     try {
       await addDoc(collection(db, 'leaves'), {
-        ...data,
-        employeeName: employee.name
+        employeeId: employee.id,
+        employeeName: employee.name,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        type: data.type
       });
-      alert("Leave added successfully. Roster will need re-generation to reflect changes.");
+      alert(`Leave added for ${employee.name}. Please re-generate the roster.`);
     } catch (err) {
       console.error("Error adding leave:", err);
     }
+  };
+
+  const handleShiftAction = (action: string) => {
+    if (!selectedCell) return;
+    
+    if (action === 'Sick' || action === 'Casual') {
+      handleAddLeave({
+        employeeName: selectedCell.employeeName,
+        startDate: selectedCell.date,
+        endDate: selectedCell.date,
+        type: action
+      });
+    } else {
+      alert(`Manual ${action} feature is coming soon! For now, please use the "Generate Roster" button to apply logic changes.`);
+    }
+    setIsActionModalOpen(false);
   };
 
   const currentRoster = rosters.find(r => r.weekStartDate === selectedWeek) || rosters[0];
@@ -121,6 +154,37 @@ export default function App() {
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           <p className="text-slate-500 font-medium animate-pulse">Syncing with SaltSync...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (permissionError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-6">
+        <div className="max-w-md w-full bg-white dark:bg-slate-950 p-8 rounded-3xl border border-red-200 dark:border-red-900/30 shadow-xl space-y-6">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center text-red-600 mx-auto">
+            <ShieldAlert size={32} />
+          </div>
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight text-red-600">Permission Denied</h2>
+            <p className="text-slate-500 dark:text-slate-400">Your Firebase database is blocking the app. You need to update your <b>Firestore Rules</b>.</p>
+          </div>
+          <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl space-y-3">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">How to fix:</p>
+            <ol className="text-sm space-y-2 text-slate-600 dark:text-slate-400 list-decimal pl-4">
+              <li>Go to <b>Firebase Console</b></li>
+              <li>Click <b>Firestore Database</b> &gt; <b>Rules</b> tab</li>
+              <li>Delete everything and paste the "Public Rules" provided by the assistant</li>
+              <li>Click <b>Publish</b></li>
+            </ol>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:opacity-90 transition-all"
+          >
+            I've updated the rules, Refresh
+          </button>
         </div>
       </div>
     );
@@ -235,7 +299,10 @@ export default function App() {
           {currentRoster ? (
             <RosterTable 
               schedule={currentRoster.schedule} 
-              onCellClick={(date, shift, name) => console.log(date, shift, name)}
+              onCellClick={(date, shift, employeeName) => {
+                setSelectedCell({ date, shift, employeeName });
+                setIsActionModalOpen(true);
+              }}
             />
           ) : (
             <div className="bg-white dark:bg-slate-950 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-20 text-center space-y-4">
@@ -289,6 +356,13 @@ export default function App() {
           onClose={() => setIsLeaveModalOpen(false)} 
           employees={employees}
           onSubmit={handleAddLeave}
+        />
+
+        <ShiftActionModal 
+          isOpen={isActionModalOpen}
+          onClose={() => setIsActionModalOpen(false)}
+          data={selectedCell}
+          onAction={handleShiftAction}
         />
       </div>
     </div>
