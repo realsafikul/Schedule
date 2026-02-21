@@ -3,41 +3,32 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getAuth, Auth } from "firebase/auth";
 
 const getFirebaseConfig = () => {
-  // 1. Try environment variable first
-  let configJson = import.meta.env.VITE_FIREBASE_CONFIG;
-  
-  // 2. Fallback to localStorage if environment variable is missing
-  if (!configJson || configJson === 'undefined') {
-    configJson = localStorage.getItem('SALTSYNC_FIREBASE_CONFIG');
-  }
+  const configJson = import.meta.env.VITE_FIREBASE_CONFIG;
   
   if (configJson && configJson !== 'undefined') {
     try {
-      // 1. Clean up common JS wrappers
-      let cleaned = configJson
+      return JSON.parse(configJson);
+    } catch (e) {
+      // Try to clean up common JS object format if it's not pure JSON
+      const cleaned = configJson
         .replace(/const firebaseConfig = /g, '')
         .replace(/let firebaseConfig = /g, '')
         .replace(/var firebaseConfig = /g, '')
         .replace(/;/g, '')
         .trim();
-
-      // 2. If it's already valid JSON, parse it
+      
       try {
-        return JSON.parse(cleaned);
-      } catch (e) {
-        // 3. If not valid JSON (e.g. unquoted keys), try to convert it
-        // This regex adds quotes to unquoted keys
+        // Simple regex to add quotes to keys
         const jsonLike = cleaned
           .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
-          .replace(/'/g, '"'); // Replace single quotes with double quotes
+          .replace(/'/g, '"');
         return JSON.parse(jsonLike);
+      } catch (err) {
+        console.error("Failed to parse Firebase config", err);
       }
-    } catch (e) {
-      console.error("Failed to parse VITE_FIREBASE_CONFIG. Please ensure it is a valid JSON or JS object.", e);
     }
   }
 
-  // Fallback to individual variables
   return {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -52,18 +43,17 @@ const firebaseConfig = getFirebaseConfig();
 
 export const isConfigured = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
 
-let app: FirebaseApp | undefined;
-let db: Firestore | undefined;
-let auth: Auth | undefined;
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
 
 if (isConfigured) {
-  try {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
-  } catch (error) {
-    console.error("Firebase initialization failed:", error);
-  }
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+} else {
+  // Mock or throw error if not configured
+  console.warn("Firebase not configured. Please set VITE_FIREBASE_CONFIG.");
 }
 
 export { db, auth };

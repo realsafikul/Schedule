@@ -1,53 +1,82 @@
-import { format, addDays, startOfWeek, isFriday, getDate, isSameDay, parseISO } from 'date-fns';
-
 export type Role = 'TL' | 'Manager' | 'Senior' | 'Junior';
 export type ShiftType = 'Morning' | 'Evening' | 'Night' | 'OFF';
+export type Priority = 'low' | 'medium' | 'high';
 
 export interface Employee {
   id: string;
   name: string;
   role: Role;
+  active: boolean;
   fridayOff: boolean;
   holidayOff: boolean;
-  currentShift: ShiftType;
+  rotationPosition: ShiftType;
+  totalNightCount: number;
+  totalShiftCount: number;
+  createdAt: string;
 }
 
-export interface Holiday {
-  id?: string;
-  date: string; // ISO format
-  name: string;
+export interface ShiftTiming {
+  startTime: string;
+  endTime: string;
 }
 
-export interface Leave {
-  id?: string;
-  employeeId: string;
-  employeeName: string;
-  startDate: string;
-  endDate: string;
-  type: 'Sick' | 'Casual';
+export interface ShiftTemplate {
+  id: string;
+  name: string; // Normal / Ramadan / Billing / Custom
+  morning: ShiftTiming;
+  evening: ShiftTiming;
+  night: ShiftTiming;
+  active: boolean;
+}
+
+export interface DayOverride {
+  customStartTime?: string;
+  customEndTime?: string;
 }
 
 export interface DaySchedule {
-  date: string;
-  shifts: {
-    morning: string[];
-    evening: string[];
-    night: string[];
-    off: string[];
-  };
+  morning: string[]; // employeeIds
+  evening: string[]; // employeeIds
+  night: string[];   // employeeIds
+  overrides: Record<string, DayOverride>; // employeeId -> override
 }
 
 export interface Roster {
-  id: string;
+  id: string; // weekStartDate (ISO format)
   weekStartDate: string;
-  schedule: DaySchedule[];
+  templateId: string;
+  days: Record<string, DaySchedule>; // YYYY-MM-DD -> DaySchedule
+}
+
+export interface Leave {
+  id: string;
+  employeeId: string;
+  startDate: string;
+  endDate: string;
+  type: 'Sick' | 'Casual';
+  approved: boolean;
 }
 
 export interface Notice {
   id: string;
-  content: string;
-  createdAt: string;
-  priority: 'low' | 'medium' | 'high';
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  priority: Priority;
+  visibility: 'dashboard' | 'login' | 'mobile';
+  active: boolean;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  employeeId?: string;
+  date?: string;
+  previousValue?: any;
+  newValue?: any;
+  adminId: string;
+  timestamp: string;
 }
 
 export interface UserProfile {
@@ -55,29 +84,3 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'public';
 }
-
-export const HOLIDAYS_2026: Holiday[] = [
-  { date: '2026-02-04', name: 'Government Holiday' },
-  { date: '2026-02-21', name: 'International Mother Language Day' },
-  { date: '2026-03-18', name: 'Government Holiday' },
-  { date: '2026-03-21', name: 'Government Holiday' },
-  { date: '2026-03-26', name: 'Independence Day' },
-  { date: '2026-04-14', name: 'Pahela Baishakh' },
-  { date: '2026-05-01', name: 'May Day' },
-  { date: '2026-05-25', name: 'Government Holiday' },
-  { date: '2026-06-26', name: 'Government Holiday' },
-  { date: '2026-08-05', name: 'Government Holiday' },
-  { date: '2026-10-21', name: 'Government Holiday' },
-  { date: '2026-12-16', name: 'Victory Day' },
-];
-
-export const INITIAL_EMPLOYEES: Omit<Employee, 'id'>[] = [
-  { name: 'Safikul', role: 'TL', fridayOff: true, holidayOff: true, currentShift: 'Morning' },
-  { name: 'Faisal', role: 'Manager', fridayOff: true, holidayOff: true, currentShift: 'Morning' },
-  { name: 'Shamsur', role: 'Senior', fridayOff: false, holidayOff: false, currentShift: 'Morning' },
-  { name: 'Sujan', role: 'Senior', fridayOff: false, holidayOff: false, currentShift: 'Evening' },
-  { name: 'Rony', role: 'Junior', fridayOff: false, holidayOff: false, currentShift: 'Night' },
-  { name: 'Sakib', role: 'Junior', fridayOff: false, holidayOff: false, currentShift: 'Morning' },
-  { name: 'GM Sakib', role: 'Junior', fridayOff: false, holidayOff: false, currentShift: 'Evening' },
-  { name: 'Sajid', role: 'Junior', fridayOff: false, holidayOff: false, currentShift: 'Morning' },
-];

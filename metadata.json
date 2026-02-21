@@ -1,5 +1,5 @@
 {
-  "name": "SaltSync Support Duty Scheduler",
-  "description": "A production-ready Employee Duty Roster Management System with smart rotation, leave re-balancing, and automated Friday/Holiday logic.",
+  "name": "SaltSync Enterprise Roster",
+  "description": "Advanced enterprise-grade Duty Roster Management System with drag-and-drop, dynamic shift templates, and validation engine.",
   "requestFramePermissions": []
 }
