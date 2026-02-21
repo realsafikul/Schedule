@@ -38,9 +38,22 @@ export interface DaySchedule {
 }
 
 export interface Roster {
-  id?: string;
+  id: string;
   weekStartDate: string;
   schedule: DaySchedule[];
+}
+
+export interface Notice {
+  id: string;
+  content: string;
+  createdAt: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: 'admin' | 'public';
 }
 
 export const HOLIDAYS_2026: Holiday[] = [

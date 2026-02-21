@@ -1,18 +1,22 @@
-import React from 'react';
-import { X, UserMinus, ArrowLeftRight, ShieldAlert } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, UserMinus, ArrowLeftRight, ShieldAlert, UserPlus } from 'lucide-react';
+import { Employee } from '../types';
 
 interface ShiftActionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  employees: Employee[];
   data: {
     date: string;
     shift: string;
     employeeName: string;
   } | null;
-  onAction: (action: 'Sick' | 'Casual' | 'Swap' | 'Force') => void;
+  onAction: (action: 'Sick' | 'Casual' | 'Swap' | 'Force', targetEmployeeId?: string) => void;
 }
 
-export const ShiftActionModal: React.FC<ShiftActionModalProps> = ({ isOpen, onClose, data, onAction }) => {
+export const ShiftActionModal: React.FC<ShiftActionModalProps> = ({ isOpen, onClose, employees, data, onAction }) => {
+  const [selectedEmpId, setSelectedEmpId] = useState('');
+
   if (!isOpen || !data) return null;
 
   return (
@@ -28,7 +32,31 @@ export const ShiftActionModal: React.FC<ShiftActionModalProps> = ({ isOpen, onCl
           </button>
         </div>
         
-        <div className="p-2 grid grid-cols-1 gap-1">
+        <div className="p-2 space-y-1">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl mb-2">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Manual Assignment</label>
+            <div className="flex gap-2">
+              <select 
+                value={selectedEmpId}
+                onChange={(e) => setSelectedEmpId(e.target.value)}
+                className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Select Employee...</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.name}</option>
+                ))}
+              </select>
+              <button 
+                onClick={() => selectedEmpId && onAction('Force', selectedEmpId)}
+                disabled={!selectedEmpId}
+                className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-all"
+                title="Assign Manually"
+              >
+                <UserPlus size={18} />
+              </button>
+            </div>
+          </div>
+
           <ActionButton 
             icon={<UserMinus size={18} className="text-red-500" />} 
             label="Mark Sick Leave" 
@@ -43,11 +71,6 @@ export const ShiftActionModal: React.FC<ShiftActionModalProps> = ({ isOpen, onCl
             icon={<ArrowLeftRight size={18} className="text-blue-500" />} 
             label="Swap Shift" 
             onClick={() => onAction('Swap')} 
-          />
-          <ActionButton 
-            icon={<ShieldAlert size={18} className="text-purple-500" />} 
-            label="Force Assign" 
-            onClick={() => onAction('Force')} 
           />
         </div>
         
