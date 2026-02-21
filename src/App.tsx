@@ -53,6 +53,16 @@ export default function App() {
             Save & Initialize System
           </button>
 
+          <button 
+            className="btn btn-link btn-sm text-danger text-decoration-none mb-3"
+            onClick={() => {
+              localStorage.removeItem('SALTSYNC_FIREBASE_CONFIG');
+              window.location.reload();
+            }}
+          >
+            Clear saved config
+          </button>
+
           <div className="bg-light p-3 rounded-3 text-start small">
             <p className="fw-bold mb-2 text-primary d-flex align-items-center gap-2">
               <ShieldAlert size={16} /> Where to find this?

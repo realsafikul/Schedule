@@ -100,7 +100,13 @@ export const ShiftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setNotices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notice)));
     });
 
+    // Fallback loading timeout
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     return () => {
+      clearTimeout(timeout);
       unsubAuth();
       unsubEmployees();
       unsubRosters();

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useShift } from '../context/ShiftContext';
 import { useRoster } from '../hooks/useRoster';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
-import { Calendar, Plus, Download, FileSpreadsheet, AlertCircle, Zap, Moon, Sun, Coffee } from 'lucide-react';
+import { Calendar, Plus, Download, FileSpreadsheet, AlertCircle, Zap, Moon, Sun, Coffee, AlertTriangle } from 'lucide-react';
 import { DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import RosterGrid from '../components/RosterGrid';
@@ -66,6 +66,21 @@ export default function Dashboard({ isPublic = false }: DashboardProps) {
   const activeEmployee = useMemo(() => 
     activeId ? employees.find(e => e.id === activeId.split('-')[0]) : null
   , [activeId, employees]);
+
+  if (employees.length === 0) {
+    return (
+      <div className="text-center py-5">
+        <div className="bg-warning bg-opacity-10 text-warning p-4 rounded-circle d-inline-flex mb-4">
+          <AlertTriangle size={48} />
+        </div>
+        <h3>No Employees Found</h3>
+        <p className="text-muted">
+          The database seems to be empty or access is denied. 
+          Please ensure you have created the <strong>employees</strong> collection in Firestore and set your <strong>Rules</strong> to allow read/write.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="row g-4">
