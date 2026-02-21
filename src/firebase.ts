@@ -43,17 +43,13 @@ const firebaseConfig = getFirebaseConfig();
 
 export const isConfigured = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
 
-let app: FirebaseApp;
-let db: Firestore;
-let auth: Auth;
+export let db: Firestore | undefined;
+export let auth: Auth | undefined;
 
 if (isConfigured) {
-  app = initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   auth = getAuth(app);
 } else {
-  // Mock or throw error if not configured
   console.warn("Firebase not configured. Please set VITE_FIREBASE_CONFIG.");
 }
-
-export { db, auth };

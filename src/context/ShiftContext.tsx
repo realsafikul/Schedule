@@ -36,6 +36,11 @@ export const ShiftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isEmergencyMode, setEmergencyMode] = useState(false);
 
   useEffect(() => {
+    if (!auth || !db) {
+      setLoading(false);
+      return;
+    }
+
     const unsubAuth = onAuthStateChanged(auth, (u) => {
       if (u) {
         setUser({ uid: u.uid, email: u.email || '', role: 'admin' });
@@ -46,6 +51,7 @@ export const ShiftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Seed initial data if needed
     const seedData = async () => {
+      if (!db) return;
       const empSnap = await getDocs(collection(db, 'employees'));
       if (empSnap.empty) {
         const initialEmployees = [
