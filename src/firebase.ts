@@ -7,16 +7,27 @@ const getFirebaseConfig = () => {
   
   if (configJson && configJson !== 'undefined') {
     try {
-      // Handle both raw JSON and the JS object format Firebase provides
-      const cleanJson = configJson
+      // 1. Clean up common JS wrappers
+      let cleaned = configJson
         .replace(/const firebaseConfig = /g, '')
+        .replace(/let firebaseConfig = /g, '')
+        .replace(/var firebaseConfig = /g, '')
         .replace(/;/g, '')
         .trim();
-      return JSON.parse(cleanJson);
+
+      // 2. If it's already valid JSON, parse it
+      try {
+        return JSON.parse(cleaned);
+      } catch (e) {
+        // 3. If not valid JSON (e.g. unquoted keys), try to convert it
+        // This regex adds quotes to unquoted keys
+        const jsonLike = cleaned
+          .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+          .replace(/'/g, '"'); // Replace single quotes with double quotes
+        return JSON.parse(jsonLike);
+      }
     } catch (e) {
-      // If JSON.parse fails, it might be a JS object literal, which is harder to parse safely
-      // but we can try a basic regex approach for the most common format
-      console.warn("Failed to parse VITE_FIREBASE_CONFIG as JSON, trying fallback...");
+      console.error("Failed to parse VITE_FIREBASE_CONFIG. Please ensure it is a valid JSON or JS object.", e);
     }
   }
 
